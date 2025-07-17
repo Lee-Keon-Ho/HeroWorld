@@ -18,12 +18,25 @@ public class CWarp : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        if(other.tag == "Player")
+        if (other.tag == "Player")
         {
-            CApp app = FindAnyObjectByType<CApp>();
-            app.Warp(1);
-            other.GetComponent<CClickMoveMent>().SetMove(false);
-            other.GetComponent<CClickMoveMent>().Idle();
+            CDataManager manager = CDataManager.Instance;
+            if (manager.GetWarp())
+            {
+                manager.SetWarp(false);
+                CApp app = FindAnyObjectByType<CApp>();
+                app.Warp(1);
+                other.GetComponent<CClickMoveMent>().Idle();
+                other.GetComponent<CClickMoveMent>().SetMove(false);
+            }
+        }
+    }
+
+    private void OnTriggerExit(Collider other)
+    {
+        if (other.tag == "Player")
+        {
+            CDataManager.Instance.SetWarp(true);
         }
     }
 }

@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.AI;
 using UnityEngine.UI;
 using TMPro;
@@ -27,15 +28,15 @@ public class CClickMoveMent : MonoBehaviour
     public Slider HpBarSlider;
     public Slider MpBarSlider;
     public Slider expSlider;
-
     public GameObject[] Character;
     public Slider slider;
-    public Canvas playerUi;
-
     private GameObject basicAttack;
+
+    public Image exit;
+    bool bExit;
+
     int layerMask;
     int layerMaskMonster;
-    int layerMaskUI;
 
     NavMeshPath path;
     CApp app;
@@ -63,6 +64,9 @@ public class CClickMoveMent : MonoBehaviour
     private float v;
     private Vector3 arrowVector;
     private Vector3 position;
+
+    private GameObject objectManager;
+    private bool warp;
     private void Awake()
     {
         camera = Camera.main;
@@ -71,29 +75,45 @@ public class CClickMoveMent : MonoBehaviour
         path = new NavMeshPath();
         app = FindAnyObjectByType<CApp>();
 
+        bExit = true;
         m_state = 0;
         pathCount = 0;
         timer = 0f;
         bAttack = true;
         toggleCameraRotation = false;
+        warp = true;
         layerMask = 1 << LayerMask.NameToLayer("Default");
         layerMaskMonster = 1 << LayerMask.NameToLayer("Monster");
-        layerMaskUI = 1 << LayerMask.NameToLayer("UI");
         psLevelUp.Stop();
 
-        DontDestroyOnLoad(gameObject);
-        //rotX = transform.localRotation.eulerAngles.x;
-        //rotY = transform.localRotation.eulerAngles.y;
-
-        //dirNormalized = realCamera.localPosition.normalized;
-        //finalDistance = realCamera.localPosition.magnitude;
+        objectManager = GameObject.Find("ObjectManager");
     }
+
+    private void Start()
+    {
+        Init();
+    }
+
     void Update()
     {
         HpBarSlider.value = curHp / maxHp;
         MpBarSlider.value = curMp / maxMp;
 
         timer += Time.deltaTime;
+
+        if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            if (bExit)
+            {
+                exit.gameObject.SetActive(true);
+                bExit = false;
+            }
+            else
+            {
+                exit.gameObject.SetActive(false);
+                bExit = true;
+            }
+        }
 
         if (Input.GetKey(KeyCode.LeftAlt))
         {
@@ -136,6 +156,7 @@ public class CClickMoveMent : MonoBehaviour
                     bAttack = true;
                     if (Physics.Raycast(camera.ScreenPointToRay(Input.mousePosition), out hit, 100f, layerMask))
                     {
+                        
                         SetDestination(hit.point);
                     }
                 }
@@ -162,7 +183,7 @@ public class CClickMoveMent : MonoBehaviour
 
             if (animator.GetCurrentAnimatorStateInfo(0).IsName("RUN")) // 보내도 안 받는 처리를 한 기억이 있다.
             {
-                if (timer >= 0.3f)
+                if (timer >= 1.0f)
                 {
                     app.NowPosition(this.transform.position, number);
                     timer = 0f;
@@ -173,12 +194,13 @@ public class CClickMoveMent : MonoBehaviour
 
     public void SetDestination(Vector3 _dest)
     {
-        //agent.CalculatePath(_dest, path);
         if(Vector3.Distance(this.transform.position, _dest) > 0.7f)
         {
-            agent.CalculatePath(_dest, path);
-            if(path.corners.Length != 0)
+            NavMeshPath tempPath = new NavMeshPath(); ;
+            agent.CalculatePath(_dest, tempPath);
+            if(tempPath.corners.Length != 0)
             {
+                path = tempPath;
                 pathCount = 1;
 
                 isMove = true;
@@ -200,10 +222,6 @@ public class CClickMoveMent : MonoBehaviour
             camera.transform.position = this.transform.position + new Vector3(0f, 2f, 0f);
             Vector3 dir = new Vector3(-v, h, 0f);
             camera.transform.eulerAngles += dir * smoothness * Time.deltaTime;
-
-
-            //Vector3 playerRotate = Vector3.Scale(camera.transform.forward, new Vector3(0f, 1f, 0f));
-            //transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(playerRotate), Time.deltaTime * smoothness);
         }
         else
         {
@@ -224,7 +242,7 @@ public class CClickMoveMent : MonoBehaviour
                     animator.SetBool("RUN", false);
                     animator.SetBool("IDLE", true);
                     isMove = false;
-                    app.Arrive(this.transform.position, number, this.transform.GetChild(2).transform.eulerAngles.y, m_state);
+                    app.Arrive(this.transform.position, number, this.transform.GetChild(3).transform.eulerAngles.y, m_state);
                     return;
                 }
                 app.MoveUser(this.transform.position, path.corners[pathCount], number, m_state);
@@ -237,6 +255,8 @@ public class CClickMoveMent : MonoBehaviour
     {
         if (Input.GetMouseButtonDown(0) && bAttack)
         {
+            if (EventSystem.current.IsPointerOverGameObject()) return;
+
             bAttack = false;
 
             colliders = Physics.OverlapSphere(basicAttack.transform.position, radius, layerMaskMonster);
@@ -271,6 +291,8 @@ public class CClickMoveMent : MonoBehaviour
     {
         if (Input.GetMouseButtonDown(0) && bAttack)
         {
+            if (EventSystem.current.IsPointerOverGameObject()) return;
+
             bAttack = false;
 
             RaycastHit hit;
@@ -288,6 +310,8 @@ public class CClickMoveMent : MonoBehaviour
     {
         if (Input.GetMouseButtonDown(0) && bAttack)
         {
+            if (EventSystem.current.IsPointerOverGameObject()) return;
+
             bAttack = false;
 
             RaycastHit hit;
@@ -331,11 +355,11 @@ public class CClickMoveMent : MonoBehaviour
 
         if (isMove)
         {
-            app.ArcherMoveAttack(this.transform.position, this.transform.GetChild(2).transform.eulerAngles.y);
+            app.ArcherMoveAttack(this.transform.position, this.transform.GetChild(3).transform.eulerAngles.y);
         }
         else
         {
-            app.ArcherIdleAttack(this.transform.GetChild(2).transform.eulerAngles.y);
+            app.ArcherIdleAttack(this.transform.GetChild(3).transform.eulerAngles.y);
         }
 
         isMove = false;
@@ -353,11 +377,11 @@ public class CClickMoveMent : MonoBehaviour
         
         if (isMove)
         {
-            app.PlayerMoveAttack(this.transform.position, this.transform.GetChild(2).transform.eulerAngles.y);
+            app.PlayerMoveAttack(this.transform.position, this.transform.GetChild(3).transform.eulerAngles.y);
         }
         else
         {
-            app.PlayerIdleAttack(this.transform.GetChild(2).transform.eulerAngles.y);
+            app.PlayerIdleAttack(this.transform.GetChild(3).transform.eulerAngles.y);
         }
 
         isMove = false;
@@ -372,15 +396,16 @@ public class CClickMoveMent : MonoBehaviour
         app.HitMonster(_indexList);
     }
 
-    public void SetInfo(ushort _number, int _level, int _curHp, int _maxHp, int _curMp, int _maxMp, int _curExp, Vector3 _position) 
+    public void Init() 
     {
-        CDataManager.Instance.GetInfo();
-        number = _number;
-        playerLevel.text = _level.ToString();
-        curHp = _curHp;
-        maxHp = _maxHp;
-        curMp = _curMp;
-        maxMp = _maxMp;
+        CStruct.sCharacterInfo info = CDataManager.Instance.GetCharacterInfo();
+
+        number = CDataManager.Instance.GetIndex();
+        playerLevel.text = info.level.ToString();
+        curHp = info.curHp;
+        maxHp = info.maxHp;
+        curMp = info.curMp;
+        maxMp = info.maxMp;
         curHpUI.text = curHp.ToString();
         maxHpUI.text = maxHp.ToString();
         curMpUI.text = curMp.ToString();
@@ -389,20 +414,42 @@ public class CClickMoveMent : MonoBehaviour
         HpBarSlider.value = curHp / maxHp;
         MpBarSlider.value = curMp / maxMp;
 
-        this.transform.position = _position;
-        position = _position;
-        agent.gameObject.transform.position = _position;
-        agent.CalculatePath(_position, path);
+        this.transform.position = info.position;
+        position = info.position;
+        agent.gameObject.transform.position = info.position;
+        agent.CalculatePath(info.position, path);
         agent.SetDestination(path.corners[pathCount]);
         agent.enabled = false;
 
         expSlider.value = 0f;
-        expSlider.value = _curExp * 0.01f;
-        curExpUI.text = _curExp.ToString("F2");
+        expSlider.value = info.curExp * 0.01f;
+        curExpUI.text = info.curExp.ToString("F2");
+
+        m_character = info.type;
+        GameObject fish = Instantiate(Character[info.type]) as GameObject;
+        fish.transform.SetParent(this.transform, false);
+        animator = GetComponentInChildren<Animator>();
+        if (m_character == 0)
+        {
+            psSword = transform.GetChild(3).GetChild(2).GetChild(0).GetComponent<ParticleSystem>();
+            psSword.Stop();
+            basicAttack = transform.GetChild(3).GetChild(3).gameObject;
+        }
+
+        transform.Find("Name").GetComponent<TextMeshPro>().text = CDataManager.Instance.GetName();
+
+        agent.enabled = true;
+
+        objectManager.SetActive(false);
+        objectManager.SetActive(true);
     }
 
     public void SetLevel(int _level, float _curExp, float _maxExp)
     {
+        curHp = 100.0f;
+        HpBarSlider.value = curHp / maxHp;
+        MpBarSlider.value = curMp / maxMp;
+
         playerLevel.text = _level.ToString();
         expSlider.value = _curExp * 0.01f;
         curExpUI.text = _curExp.ToString("F2");
@@ -414,22 +461,6 @@ public class CClickMoveMent : MonoBehaviour
     void LeveLUp()
     {
         levelUp.gameObject.SetActive(false);
-    }
-
-    public int GetNumber() { return number; }
-
-    public void SetCharacter(int _num)
-    {
-        m_character = _num;
-        GameObject fish = Instantiate(Character[_num]) as GameObject;
-        fish.transform.SetParent(this.transform, false);
-        animator = GetComponentInChildren<Animator>();
-        if (m_character == 0)
-        {
-            psSword = transform.GetChild(2).GetChild(2).GetChild(0).GetComponent<ParticleSystem>();
-            psSword.Stop();
-            basicAttack = transform.GetChild(2).GetChild(3).gameObject;
-        }
     }
 
     public void SetExp(float _exp)
@@ -444,19 +475,7 @@ public class CClickMoveMent : MonoBehaviour
         curHpUI.text = curHp.ToString();
         HpBarSlider.value = curHp / maxHp;
     }
-    public void SetAgent_enabled()
-    {
-        agent.enabled = true;
-    }
 
-    public void SetPosition(Vector3 _position)
-    {
-        this.transform.position = _position;
-        position = _position;
-        agent.gameObject.transform.position = _position;
-        agent.CalculatePath(_position, path);
-        agent.enabled = false;
-    }
     public void SetMove(bool _b)
     {
         isMove = _b;
@@ -467,5 +486,16 @@ public class CClickMoveMent : MonoBehaviour
         animator.SetBool("ATTACK", false);
         animator.SetBool("RUN", false);
         animator.SetBool("IDLE", true);
+    }
+    public void OnExitOk()
+    {
+        CApp app = FindAnyObjectByType<CApp>();
+        app.LogOut();
+    }
+
+    public void OnExitNo()
+    {
+        exit.gameObject.SetActive(false);
+        bExit = true;
     }
 }

@@ -24,6 +24,7 @@ static public class CStruct
 
     public struct sCharacterInfo
     {
+        public int type;
         public int level;
         public int curHp;
         public int maxHp;

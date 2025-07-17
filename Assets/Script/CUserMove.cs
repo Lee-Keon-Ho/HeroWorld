@@ -12,6 +12,8 @@ public class CUserMove : MonoBehaviour
     public GameObject ArrowObject;
     public GameObject FireObject;
     public ParticleSystem psSword;
+    public GameObject userChat;
+    public TextMeshProUGUI userChatText;
 
     private Vector3 arrowVector;
     private bool isMove;
@@ -25,6 +27,7 @@ public class CUserMove : MonoBehaviour
         speed = 2f;
         userNumber = 0;
         animator = GetComponentInChildren<Animator>();
+        userChat.SetActive(false);
     }
 
     private void Start()
@@ -82,7 +85,7 @@ public class CUserMove : MonoBehaviour
     {
         this.transform.position = _endPosition;
         endPosition = _endPosition;
-        this.transform.GetChild(1).localEulerAngles = new Vector3(0, _y, 0);
+        this.transform.GetChild(2).localEulerAngles = new Vector3(0, _y, 0);
         isMove = false;
         animator.SetBool("IDLE", true);
         animator.SetBool("RUN", false);
@@ -91,7 +94,27 @@ public class CUserMove : MonoBehaviour
     public void IdleAttack(float _y)
     {
         isMove = false;
-        this.transform.GetChild(1).localEulerAngles = new Vector3(0, _y, 0);
+        this.transform.GetChild(2).localEulerAngles = new Vector3(0, _y, 0);
+
+        animator.SetBool("IDLE", false);
+        animator.SetBool("RUN", false);
+        animator.SetBool("ATTACK", true);
+
+        if (nCharacter == 0)
+        {
+            psSword = transform.GetChild(2).GetChild(2).GetChild(0).GetComponent<ParticleSystem>();
+            psSword.Play();
+        }
+        if (nCharacter == 1) Invoke("CreateArrow", 0.7f);
+        if (nCharacter == 2) Invoke("CreateFireBall", 0.7f);
+    }
+
+    public void MoveAttack(Vector3 _position, float _y)
+    {
+        isMove = false;
+        this.transform.position = _position;
+        endPosition = _position;
+        this.transform.GetChild(2).localEulerAngles = new Vector3(0, _y, 0);
 
         animator.SetBool("IDLE", false);
         animator.SetBool("RUN", false);
@@ -106,38 +129,19 @@ public class CUserMove : MonoBehaviour
         if (nCharacter == 2) Invoke("CreateFireBall", 0.7f);
     }
 
-    public void MoveAttack(Vector3 _position, float _y)
-    {
-        isMove = false;
-        this.transform.position = _position;
-        endPosition = _position;
-        this.transform.GetChild(1).localEulerAngles = new Vector3(0, _y, 0);
-
-        animator.SetBool("IDLE", false);
-        animator.SetBool("RUN", false);
-        animator.SetBool("ATTACK", true);
-
-        if (nCharacter == 0)
-        {
-            psSword = transform.GetChild(1).GetChild(2).GetChild(0).GetComponent<ParticleSystem>();
-            psSword.Play();
-        }
-        if (nCharacter == 1) Invoke("CreateArrow", 0.7f);
-    }
-
     private void CreateArrow()
     {
         GameObject arrow = Instantiate(ArrowObject);
         arrow.transform.position = new Vector3(transform.position.x, 1.35f, transform.position.z);
         //arrow.transform.localEulerAngles = transform.GetChild(1).localEulerAngles;
-        arrow.transform.right = -transform.GetChild(1).transform.forward;
+        arrow.transform.right = -transform.GetChild(2).transform.forward;
     }
 
     private void CreateFireBall()
     {
         GameObject fireBall = Instantiate(FireObject);
         fireBall.transform.position = new Vector3(transform.position.x, 1.35f, transform.position.z);
-        fireBall.transform.forward = transform.GetChild(1).transform.forward;
+        fireBall.transform.forward = transform.GetChild(2).transform.forward;
     }
 
     public void SetUserNumber(int _userNumber)
@@ -155,7 +159,7 @@ public class CUserMove : MonoBehaviour
         animator = GetComponentInChildren<Animator>();
         if(_num == 0)
         {
-            psSword = transform.GetChild(1).GetChild(2).GetChild(0).GetComponent<ParticleSystem>();
+            psSword = transform.GetChild(2).GetChild(2).GetChild(0).GetComponent<ParticleSystem>();
             psSword.Stop();
         }        
     }
@@ -164,8 +168,20 @@ public class CUserMove : MonoBehaviour
     {
         if (nCharacter == 0)
         {
-            psSword = transform.GetChild(1).GetChild(2).GetChild(0).GetComponent<ParticleSystem>();
+            psSword = transform.GetChild(2).GetChild(2).GetChild(0).GetComponent<ParticleSystem>();
             psSword.Stop();
         }
+    }
+
+    public void OnChatting(string _str)
+    {
+        userChat.SetActive(true);
+        userChatText.text = _str;
+        Invoke("UserChatDisabled", 3.0f);
+    }
+
+    private void UserChatDisabled()
+    {
+        userChat.SetActive(false);
     }
 }

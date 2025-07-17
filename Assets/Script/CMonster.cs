@@ -1,5 +1,5 @@
 using UnityEngine;
-using UnityEngine.UI;
+using TMPro;
 
 public class CMonster : MonoBehaviour
 {
@@ -124,6 +124,7 @@ public class CMonster : MonoBehaviour
         bDie = true;
         curHp = 0;
         damage.GetComponent<DamageText>().SetDamage(_damage);
+        SetDestination(transform.position);
         GameObject text = Instantiate(damage);
         text.transform.position = transform.position + Vector3.up;
         animator.SetBool("Die", true);

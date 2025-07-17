@@ -16,8 +16,15 @@ public class CObjectManager : MonoBehaviour
 
     private void Awake()
     {
-        if (CObjectManager.instance == null) CObjectManager.instance = this;
-        DontDestroyOnLoad(gameObject);
+        if (instance != null)
+        {
+            Destroy(this.gameObject);
+        }
+        else
+        {
+            instance = this;
+            DontDestroyOnLoad(this);
+        }
     }
 
     void Start()
@@ -36,7 +43,6 @@ public class CObjectManager : MonoBehaviour
         {
             GameObject player = Instantiate(playerPrefab) as GameObject;
             player.transform.parent = transform;
-            player.SetActive(false);
             players.Add(player);
             OnPlayer.Add(false);
         }
@@ -48,11 +54,8 @@ public class CObjectManager : MonoBehaviour
         {
             GameObject monster = Instantiate(monsterPrefab[_type]);
             monster.transform.parent = transform;
-            monster.SetActive(false);
             monsters.Add(monster);
             OnMonster.Add(false);
-            Debug.Log(monsters.Count);
-            Debug.Log(OnMonster.Count);
         }
     }
     
@@ -135,7 +138,7 @@ public class CObjectManager : MonoBehaviour
         {
             if (OnPlayer[i])
             {
-                playerObj = players[i];  // 여기도 type에 맞춰서 줘야한다
+                playerObj = players[i]; 
                 OnPlayer[i] = false;
 
                 if (playerObj != null)
@@ -147,5 +150,10 @@ public class CObjectManager : MonoBehaviour
 
         players.Clear();
         OnPlayer.Clear();
+    }
+
+    public void ChannelChange()
+    {
+        Destroy(gameObject);
     }
 }

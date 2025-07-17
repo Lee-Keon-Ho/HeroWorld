@@ -8,7 +8,6 @@ using DG.Tweening;
 using UnityEngine.SceneManagement;
 public class CLoginApp : MonoBehaviour
 {
-    public CStruct.sCharacterList sCharacters;
     private CLoginSocket m_loginSocket;
     public CLoginPacketHandler m_packetHandler;
     public TMP_InputField id;
@@ -21,12 +20,13 @@ public class CLoginApp : MonoBehaviour
     public Image notises4;
     private void Awake()
     {
-        Screen.SetResolution(1280, 720, false);
+        Screen.SetResolution(960, 480, false);
         Application.targetFrameRate = 60;
         m_loginSocket = new CLoginSocket();
-
+        
         m_loginSocket.Init("112.184.241.183", 30003);
 
+        m_packetHandler.Initialized(m_loginSocket);
         DontDestroyOnLoad(this);
     }
 
@@ -41,6 +41,11 @@ public class CLoginApp : MonoBehaviour
         {
             m_packetHandler.Handle(m_loginSocket.GetBuffer());
         }
+    }
+
+    private void OnDestroy()
+    {
+        m_loginSocket.Delete();
     }
 
     public void login()
@@ -74,32 +79,6 @@ public class CLoginApp : MonoBehaviour
         pw.interactable = true;
         loginButton.interactable = true;
         caButton.interactable = true;
-    }
-
-    public void CreateCharacter(string _name, int _index)
-    {
-        if(_index > 0)
-        {
-            m_loginSocket.CreateCharacter(_name, _index);
-        }
-
-    }
-
-    public void DeleteCharacter(string _name)
-    {
-        if(_name.Length > 0)
-        {
-            m_loginSocket.DeleteCharacter(_name);
-        }
-    }
-
-    public void DoubleCheck(string _name)
-    {
-        m_loginSocket.DoubleCheck(_name);
-    }
-    public void OnStartButton(string _name, int _nameLen)
-    {
-        m_loginSocket.InField(_name, _nameLen);
     }
 
     public void OnNotises1CheckButton()
@@ -137,10 +116,8 @@ public class CLoginApp : MonoBehaviour
         caButton.interactable = true;
     }
 
-    public void SetCharacterList(CStruct.sCharacterList _sCharacter)
+    public void SocketDelete()
     {
-        sCharacters = _sCharacter;
+        m_loginSocket.Delete();
     }
-
-    public CStruct.sCharacterList GetCharacterList() { return sCharacters; }
 }

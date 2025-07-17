@@ -39,14 +39,15 @@ public class CPacketHandler : MonoBehaviour
         CS_PT_PALYER_HIT,
     }
 
+    CSocket m_socket;
+
     MemoryStream memoryStream;
     BinaryReader binaryReader;
 
     Dictionary<int, GameObject> players;
     Dictionary<int, GameObject> monsters;
 
-    public GameObject myPlayer;
-    private Chatting chatting;
+    bool logOut = false;
 
     int userCount;
 
@@ -63,8 +64,6 @@ public class CPacketHandler : MonoBehaviour
 
     private void Awake()
     {
-        chatting = FindAnyObjectByType<Chatting>();
-
         players = new Dictionary<int, GameObject>();
         monsters = new Dictionary<int, GameObject>();
 
@@ -131,68 +130,74 @@ public class CPacketHandler : MonoBehaviour
             case 13:
                 PlayerMoveAttack();
                 break;
-            case 15:
+            case 14:
                 PlayerChatting();
                 break;
-            case 16:
+            case 15:
                 Notice();
                 break;
-            case 17:
+            case 16:
                 AacherIdleAttack();
                 break;
-            case 18:
+            case 17:
                 AacherMoveAttack();
                 break;
-            //case 18:
-            //    UserPosition();
-            //    break;
-            case 19:
+            case 18:
                 AreaNewUser();
                 break;
-            case 20:
+            case 19:
                 MonsterMove();
                 break;
-            case 21:
+            case 20:
                 CreateMonster();
                 break;
-            case 22:
+            case 21:
                 MonsterOutSector();
                 break;
-            case 23:
+            case 22:
                 MonsterInSector();
                 break;
-            case 24:
+            case 23:
                 OutSectorMonster();
                 break;
-            case 25:
+            case 24:
                 InSectorMonster();
                 break;
-            case 26:
+            case 25:
                 Hit_Monster();
                 break;
-            case 27:
+            case 26:
                 Attack_Monster();
                 break;
-            case 28:
+            case 27:
                 Die_Monster();
                 break;
-            case 29:
+            case 28:
                 Regen_Monster();
                 break;
-            case 30:
+            case 29:
                 PlayerExp();
                 break;
-            case 31:
+            case 30:
                 PlayerHit();
                 break;
-            case 32:
+            case 31:
                 PlayerLevelUp();
                 break;
-            case 97:
+            case 32:
+                HeartBeat();
+                break;
+            case 33:
                 WrapDeleteUser();
                 break;
+            case 34:
+                WRAP();
+                break;
+            case 35:
+                ChannelChange();
+                break;
             case 98:
-                test();
+                LogOut();
                 break;
             case 99:
                 UserCount();
@@ -217,8 +222,8 @@ public class CPacketHandler : MonoBehaviour
     public void Login()
     {
         userCount = binaryReader.ReadUInt16();
-        byte[] Buffer = new byte[32];
-        Buffer = binaryReader.ReadBytes(32);
+        byte[] Buffer = new byte[28];
+        Buffer = binaryReader.ReadBytes(28);
         string name = System.Text.Encoding.Unicode.GetString(Buffer);
         int type = binaryReader.ReadInt32();
         int level = binaryReader.ReadInt32();
@@ -234,11 +239,8 @@ public class CPacketHandler : MonoBehaviour
         int damageMin = binaryReader.ReadInt32();
         int damageMax = binaryReader.ReadInt32();
 
-        CDataManager.Instance.SetInfo(level, curHp, maxHp, curMp, maxMp, curExp, new Vector3(153.0f, 1.0f, 178.0f));
-        CClickMoveMent cClickMove = myPlayer.GetComponent<CClickMoveMent>();
-        cClickMove.SetInfo((ushort)userCount, level, curHp, maxHp, curMp, maxMp, curExp, new Vector3(153.0f, 1.0f, 178.0f));
-        cClickMove.SetCharacter(type - 1);
-        myPlayer.transform.Find("Name").GetComponent<TextMeshPro>().text = name;
+        CDataManager.Instance.SetInfo(type - 1, level, curHp, maxHp, curMp, maxMp, curExp, position, (ushort)userCount);
+        CDataManager.Instance.SetName(name);
     }
 
     public void InField()
@@ -250,20 +252,21 @@ public class CPacketHandler : MonoBehaviour
         int userNumber;
         int userState;
         int userCharacter;
-        byte[] Buffer = new byte[32];
+        byte[] Buffer = new byte[28];
         Vector3 startPosition;
         Vector3 EndPosition;
         float y;
 
         CObjectManager objManager = CObjectManager.instance;
-        
+        //objManager.ResetMonster();
+        //players.Clear();
         for (int i = 0; i < userCount; i++)
         {
             userNumber = binaryReader.ReadUInt16();
             userState = binaryReader.ReadUInt16();
             userCharacter = binaryReader.ReadUInt16();
             y = binaryReader.ReadSingle();
-            Buffer = binaryReader.ReadBytes(32);
+            Buffer = binaryReader.ReadBytes(28);
 
             startPosition.x = binaryReader.ReadSingle();
             startPosition.y = binaryReader.ReadSingle();
@@ -272,7 +275,7 @@ public class CPacketHandler : MonoBehaviour
             EndPosition.y = binaryReader.ReadSingle();
             EndPosition.z = binaryReader.ReadSingle();
 
-            if (userNumber == myPlayer.GetComponent<CClickMoveMent>().GetNumber()) continue;
+            if (userNumber == CDataManager.Instance.GetIndex()) continue;
 
             GameObject player = objManager.GetPlayer();
 
@@ -290,22 +293,46 @@ public class CPacketHandler : MonoBehaviour
         }
     }
 
-    private void test()
+    private void WRAP()
     {
         int index = binaryReader.ReadUInt16();
-        if(index == 1)
-        {
-            CSceneManager.Instance.OnChangeScene("ForestField");
-        }
-        else
-        {
-            CSceneManager.Instance.OnChangeScene("WinterField");
-        }
 
         CApp app = FindAnyObjectByType<CApp>();
         app.NextField(index);
-        app.InField();
+
+        CObjectManager.instance.ResetMonster();
+        players.Clear();
+        monsters.Clear();
+
+        if (index == 0)
+        {
+            CSceneManager.Instance.OnChangeScene("ForestTown");
+        }
+        else if(index == 1)
+        {
+            CSceneManager.Instance.OnChangeScene("ForestField");
+        }
+        else if(index == 2)
+        {
+            CSceneManager.Instance.OnChangeScene("WinterField");
+        }
     }
+
+    private void ChannelChange()
+    {
+        int field = CDataManager.Instance.GetFieldIndex();
+        CApp app = FindAnyObjectByType<CApp>();
+
+        if (field == 0) CSceneManager.Instance.OnChangeScene("ForestTown");
+        else if (field == 1) CSceneManager.Instance.OnChangeScene("ForestField");
+        else if (field == 2) CSceneManager.Instance.OnChangeScene("WinterField");
+
+        CObjectManager.instance.ResetMonster();
+        players.Clear();
+        monsters.Clear();
+        app.Init();
+    }
+
     public void NextField()
     {
         Vector3 position;
@@ -314,18 +341,24 @@ public class CPacketHandler : MonoBehaviour
         position.y = binaryReader.ReadSingle();
         position.z = binaryReader.ReadSingle();
 
-        myPlayer.GetComponent<CClickMoveMent>().SetPosition(position);
-        myPlayer.GetComponent<CClickMoveMent>().SetAgent_enabled();
+        CDataManager.Instance.SetPosition(position);
         CObjectManager.instance.ResetMonster();
+        monsters.Clear();
         players.Clear();
+
+        CApp app = FindAnyObjectByType<CApp>();
+        app.InField();
     }
 
     public void WrapDeleteUser()
     {
         int index = binaryReader.ReadUInt16();
 
-        players[index].gameObject.SetActive(false);
-        players.Remove(index);
+        if(players.ContainsKey(index))
+        {
+            players[index].gameObject.SetActive(false);
+            players.Remove(index);
+        }
     }
 
     public void MoveUser()
@@ -351,13 +384,13 @@ public class CPacketHandler : MonoBehaviour
     public void NewUser() // 새로 입장한 플레이어
     {
         Vector3 position;
-        byte[] Buffer = new byte[32];
+        byte[] Buffer = new byte[28];
         ushort userNumber = binaryReader.ReadUInt16();
 
-        if (userNumber == myPlayer.GetComponent<CClickMoveMent>().GetNumber()) return;
+        if (userNumber == CDataManager.Instance.GetIndex()) return;
 
         int userCharacter = binaryReader.ReadUInt16();
-        Buffer = binaryReader.ReadBytes(32);
+        Buffer = binaryReader.ReadBytes(28);
         position.x = binaryReader.ReadSingle();
         position.y = binaryReader.ReadSingle();
         position.z = binaryReader.ReadSingle();
@@ -372,6 +405,7 @@ public class CPacketHandler : MonoBehaviour
         userMove.SetDestination(position, position);
 
         players.Add(userNumber, player);
+        player.SetActive(true);
     }
     public void Arrive()
     {
@@ -438,11 +472,14 @@ public class CPacketHandler : MonoBehaviour
         EndPosition.z = binaryReader.ReadSingle();
 
         //GameObject player = CObjectManager.instance.GetPlayer();
-        players[userNumber].SetActive(true);
-        players[userNumber].transform.position = startPosition;
-        players[userNumber].GetComponent<CUserMove>().SetUserNumber(userNumber);
-        players[userNumber].GetComponent<CUserMove>().SetDestination(startPosition, EndPosition);
-        players[userNumber].GetComponent<CUserMove>().psStop();
+        if(players.ContainsKey(userNumber))
+        {
+            players[userNumber].SetActive(true);
+            players[userNumber].transform.position = startPosition;
+            players[userNumber].GetComponent<CUserMove>().SetUserNumber(userNumber);
+            players[userNumber].GetComponent<CUserMove>().SetDestination(startPosition, EndPosition);
+            players[userNumber].GetComponent<CUserMove>().psStop();
+        }
     }
 
     void OutSector()
@@ -466,8 +503,6 @@ public class CPacketHandler : MonoBehaviour
         Vector3 EndPosition;
         float y;
 
-        CObjectManager objManager = CObjectManager.instance;
-
         for (int i = 0; i < userCount; i++)
         {
             userIndex = binaryReader.ReadUInt16();
@@ -483,20 +518,23 @@ public class CPacketHandler : MonoBehaviour
             EndPosition.y = binaryReader.ReadSingle();
             EndPosition.z = binaryReader.ReadSingle();
 
-            players[userIndex].SetActive(true);
-            if (userState == 0)
+            if(players.ContainsKey(userIndex))
             {
-                players[userIndex].transform.position = EndPosition;
-                players[userIndex].GetComponent<CUserMove>().SetUserNumber(userIndex);
-                players[userIndex].GetComponent<CUserMove>().SetGoalPosition(EndPosition);
+                players[userIndex].SetActive(true);
+                if (userState == 0)
+                {
+                    players[userIndex].transform.position = EndPosition;
+                    players[userIndex].GetComponent<CUserMove>().SetUserNumber(userIndex);
+                    players[userIndex].GetComponent<CUserMove>().SetGoalPosition(EndPosition);
+                }
+                if (userState == 1)
+                {
+                    players[userIndex].transform.position = startPosition;
+                    players[userIndex].GetComponent<CUserMove>().SetUserNumber(userIndex);
+                    players[userIndex].GetComponent<CUserMove>().SetDestination(startPosition, EndPosition);
+                }
+                players[userIndex].GetComponent<CUserMove>().psStop();
             }
-            if (userState == 1)
-            {
-                players[userIndex].transform.position = startPosition;
-                players[userIndex].GetComponent<CUserMove>().SetUserNumber(userIndex);
-                players[userIndex].GetComponent<CUserMove>().SetDestination(startPosition, EndPosition);
-            }
-            players[userIndex].GetComponent<CUserMove>().psStop();
             //players.Add(userNumber, player);
         }
     }
@@ -528,20 +566,28 @@ public class CPacketHandler : MonoBehaviour
 
     private void PlayerChatting()
     {
-        int nameLen = binaryReader.ReadUInt16();
-        string name = System.Text.Encoding.Unicode.GetString(binaryReader.ReadBytes(nameLen));
+        int index = binaryReader.ReadUInt16();
+        string name = System.Text.Encoding.Unicode.GetString(binaryReader.ReadBytes(28));
         string str = name.Replace("\0", string.Empty);
-        int chatLen = binaryReader.ReadUInt16();
-        string chat = System.Text.Encoding.Unicode.GetString(binaryReader.ReadBytes(chatLen));
+        string chat = System.Text.Encoding.Unicode.GetString(binaryReader.ReadBytes(28));
+
+        Chatting chatting = FindAnyObjectByType<Chatting>();
+        if (CDataManager.Instance.CompareName(name))
+        {
+            chatting.MyChat(chat);
+        }
+        else
+        {
+            players[index].GetComponent<CUserMove>().OnChatting(chat);
+        }
 
         chatting.InputChat(str + " : " + chat);
     }
 
     private void Notice()
     {
-        int len = binaryReader.ReadUInt16();
-        string str = System.Text.Encoding.Unicode.GetString(binaryReader.ReadBytes(len));
-
+        string str = System.Text.Encoding.Unicode.GetString(binaryReader.ReadBytes(28));
+        Chatting chatting = FindAnyObjectByType<Chatting>();
         chatting.Notice(str);
     }
 
@@ -724,7 +770,7 @@ public class CPacketHandler : MonoBehaviour
         GameObject monster = CObjectManager.instance.GetMonster(type);
 
         monster.transform.position = currentPosition;
-
+        
         if (type == 1) // override
         {
             monsters.Add(index, monster);
@@ -781,6 +827,7 @@ public class CPacketHandler : MonoBehaviour
         else
         {
             GameObject monster = CObjectManager.instance.GetMonster(type);
+            monster.GetComponent<CMonster>().SetInfo(index, type, 1);
             monsters.Add(index, monster);
         }
 
@@ -797,8 +844,6 @@ public class CPacketHandler : MonoBehaviour
     {
         int count = binaryReader.ReadUInt16();
         int index;
-
-        CObjectManager objManager = CObjectManager.instance;
 
         for (int i = 0; i < count; i++)
         {
@@ -830,7 +875,7 @@ public class CPacketHandler : MonoBehaviour
             destination.y = binaryReader.ReadSingle();
             destination.z = binaryReader.ReadSingle();
 
-            if(!monsters.ContainsKey(index))
+            if (!monsters.ContainsKey(index))
             {
                 GameObject monster = CObjectManager.instance.GetMonster(type);
                 monster.GetComponent<CMonster>().SetInfo(index, type, 1);
@@ -839,6 +884,7 @@ public class CPacketHandler : MonoBehaviour
 
             monsters[index].SetActive(true);
             monsters[index].transform.position = start;
+            monsters[index].GetComponent<CMonster>().SetDestination(destination);
         }
     }
 
@@ -846,14 +892,18 @@ public class CPacketHandler : MonoBehaviour
     {
         float exp = binaryReader.ReadSingle();
 
-        myPlayer.GetComponent<CClickMoveMent>().SetExp(exp);
+        CClickMoveMent cClick = FindAnyObjectByType<CClickMoveMent>();
+        cClick.SetExp(exp);
+        //myPlayer.GetComponent<CClickMoveMent>().SetExp(exp);
     }
 
     private void PlayerHit()
     {
         int curHp = binaryReader.ReadUInt16();
 
-        myPlayer.GetComponent<CClickMoveMent>().SetCurHp(curHp);
+        CClickMoveMent cClick = FindAnyObjectByType<CClickMoveMent>();
+        cClick.SetCurHp(curHp);
+        //myPlayer.GetComponent<CClickMoveMent>().SetCurHp(curHp);
     }
 
     private void PlayerLevelUp()
@@ -862,10 +912,36 @@ public class CPacketHandler : MonoBehaviour
         float curExp = binaryReader.ReadSingle();
         float maxExp = binaryReader.ReadSingle();
 
-        myPlayer.GetComponent<CClickMoveMent>().SetLevel(level, curExp, maxExp);
+        CClickMoveMent cClick = FindAnyObjectByType<CClickMoveMent>();
+        cClick.SetLevel(level, curExp, maxExp);
+        //myPlayer.GetComponent<CClickMoveMent>().SetLevel(level, curExp, maxExp);
+    }
+
+    private void HeartBeat()
+    {
+        CApp app = FindAnyObjectByType<CApp>();
+        app.SendHeartBeat();
+    }
+
+    private void LogOut()
+    {
+        CApp app = FindAnyObjectByType<CApp>();
+        CLoginApp loginApp = FindAnyObjectByType<CLoginApp>();
+        logOut = true;
+#if UNITY_EDITOR
+        app.SocketDelete();
+        loginApp.SocketDelete();
+        UnityEditor.EditorApplication.isPlaying = false;
+#else
+        app.SocketDelete();
+        loginApp.SocketDelete();
+        Application.Quit(); // 어플리케이션 종료
+#endif
     }
 
     public float GetLatency() { return latency; }
     public int GetUserCountAll() { return userCountAll; }
     public int GetSectorUserCount() { return inSectorUserCount; }
+
+    public bool GetLogOut() { return logOut; }
 }

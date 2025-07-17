@@ -10,13 +10,15 @@ public class Chatting : MonoBehaviour
     public TMP_InputField input;
     public GameObject content;
     public TextMeshProUGUI text;
+    public GameObject myChatting;
+    public TextMeshProUGUI myChatText;
     CApp app;
     EventSystem system;
     void Start()
     {
         system = EventSystem.current;
         app = FindAnyObjectByType<CApp>();
-        DontDestroyOnLoad(gameObject);
+        myChatting.SetActive(false);
     }
 
     // Update is called once per frame
@@ -24,7 +26,7 @@ public class Chatting : MonoBehaviour
     {
         if(input.text.Length > 0 && Input.GetKeyDown(KeyCode.Return))
         {
-            SnedChatting(input.text);
+            SendChatting(input.text);
             input.text = "";
         }
         else if(Input.GetKeyDown(KeyCode.Return))
@@ -33,7 +35,7 @@ public class Chatting : MonoBehaviour
         }
     }
 
-    private void SnedChatting(string _string)
+    private void SendChatting(string _string)
     {
         app.SendChatting(_string);
     }
@@ -51,5 +53,17 @@ public class Chatting : MonoBehaviour
         textMesh.color = Color.yellow;
         textMesh.text = "[공지사항]" + _str;
         textMesh.transform.SetParent(content.transform, false);
+    }
+
+    public void MyChat(string _str)
+    {
+        myChatting.SetActive(true);
+        myChatText.text = _str;
+        Invoke("ChatDisabled", 3.0f);
+    }
+
+    private void ChatDisabled()
+    {
+        myChatting.SetActive(false);
     }
 }

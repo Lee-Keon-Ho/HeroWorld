@@ -1,42 +1,27 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class CApp : MonoBehaviour
 {
     private CSocket m_socket;
     public CPacketHandler m_packetHandler;
 
-    float timer = 0f;
-    GUIStyle style = new GUIStyle();
-    float x = 5f;
-    float y = 5f;
-    float w = Screen.width;
-    float h = 20f;
-
     float deltaTime = 0.0f;
 
     private void Awake()
     {
         m_socket = new CSocket();
-        m_socket.Init("112.184.241.183", 30002);
-        
-        style.normal.textColor = Color.red;
-        style.fontSize = 20;
-
+        m_socket.Init();
         m_socket.Login();
-        m_socket.NextField(0);
 
-        DontDestroyOnLoad(this);
+        DontDestroyOnLoad(gameObject);
     }
-
-    //public void OnGUI()
-    //{
-    //    GUI.Label(new Rect(w - 200, y, w, h + 20), "FPS : " + 1.0f / deltaTime, style);
-    //}
 
     private void Start()
     {
+        //m_socket.NextField(CDataManager.Instance.GetFieldIndex());
         m_socket.InField();
     }
 
@@ -46,23 +31,25 @@ public class CApp : MonoBehaviour
         {
             m_packetHandler.Handle(m_socket.GetBuffer());
         }
-
-        //timer += Time.deltaTime;
         deltaTime += (Time.deltaTime - deltaTime) * 0.1f;
-
-        //if (timer >= 1f)
-        //{
-        //    timer = 0f;
-        //    m_socket.Latency();
-        //    m_socket.UserCount();
-        //}
     }
 
-    private void OnDestroy()
+    public void OnDestroy()
     {
-        m_socket.LogOut();
-        m_socket.Delete();
+        if(m_socket != null)
+        {
+            m_socket.Delete();
+        }
     }
+
+    public void OnApplicationQuit()
+    {
+        if (m_socket != null)
+        {
+            m_socket.Delete();
+        }
+    }
+
     public void InField()
     {
         m_socket.InField();
@@ -123,7 +110,40 @@ public class CApp : MonoBehaviour
     {
         m_socket.SendChatting(_str);
     }
+
+    public void SendHeartBeat()
+    {
+        m_socket.SendHeartBeat();
+    }
+
+    public void SocketDelete()
+    {
+        m_socket.Delete();
+    }
+    
+    public void LogOut()
+    {
+        m_socket.LogOut();
+    }
+
+    public void ChannelChange()
+    {
+        m_socket.ChannelChange();
+    }
+
+    public void Init()
+    {
+        m_socket.Delete();
+
+        m_socket = new CSocket();
+        m_socket.Init();
+        m_socket.Login();
+        m_socket.InField();
+    }
+
     public float GetFPS() { return deltaTime; }
 
     public float GetLatency() { return m_socket.GetLatency(); }
+
+    public CSocket GetSocket() { return m_socket; }
 }

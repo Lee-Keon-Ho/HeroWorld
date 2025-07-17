@@ -33,6 +33,7 @@ public class CCharacterScene : MonoBehaviour
     private int DeleteCharacterindex;
     private int characterCount;
     public Color color;
+    public GameObject[] test;
     void Start()
     {
         characterObject = new GameObject[3];
@@ -41,7 +42,7 @@ public class CCharacterScene : MonoBehaviour
             ps[i].Stop();
         }
         camera = Camera.main;
-        sCharacters = FindAnyObjectByType<CLoginApp>().GetCharacterList();
+        sCharacters = FindAnyObjectByType<CWorldApp>().GetCharacterList();
         CreateCharacterindex = 0;
         DeleteCharacterindex = 0;
         characterCount = 0;
@@ -162,7 +163,7 @@ public class CCharacterScene : MonoBehaviour
         int len = InputDoubleCheck.text.Length;
         if (len >= Constants.name_min && len <= Constants.name_max)
         {
-            CLoginApp app = FindAnyObjectByType<CLoginApp>();
+            CWorldApp app = FindAnyObjectByType<CWorldApp>();
             app.DoubleCheck(InputDoubleCheck.text);
             NameImageExitButton.enabled = false;
             NameCheckButton.enabled = false;
@@ -181,9 +182,7 @@ public class CCharacterScene : MonoBehaviour
 
     public void OnCreateCharacterOk()
     {
-        CLoginApp app = FindAnyObjectByType<CLoginApp>();
-
-        // 닉네임도 전송해서 캐릭터를 만들어야 한다.
+        CWorldApp app = FindAnyObjectByType<CWorldApp>();
 
         app.CreateCharacter(InputDoubleCheck.text, CreateCharacterindex);
         InputDoubleCheck.text = "";
@@ -232,7 +231,7 @@ public class CCharacterScene : MonoBehaviour
     {
         createButton.enabled = true;
         deleteButton.enabled = true;
-        CLoginApp app = FindAnyObjectByType<CLoginApp>();
+        CWorldApp app = FindAnyObjectByType<CWorldApp>();
 
         if(DeleteCharacterindex == 1)
         {
@@ -412,7 +411,7 @@ public class CCharacterScene : MonoBehaviour
 
     public void OnStartButton()
     {
-        CLoginApp app = FindAnyObjectByType<CLoginApp>();
+        CWorldApp app = FindAnyObjectByType<CWorldApp>();
         
         switch(DeleteCharacterindex)
         {
@@ -437,6 +436,15 @@ public class CCharacterScene : MonoBehaviour
         else
         {
             doubleCheckImage.gameObject.SetActive(true);
+        }
+    }
+
+
+    public void TEST()
+    {
+        foreach (GameObject game in test)
+        {
+            game.SetActive(true);
         }
     }
 }

@@ -9,15 +9,17 @@ public class CLoginPacketHandler : MonoBehaviour
 {
     MemoryStream memoryStream;
     BinaryReader binaryReader;
-
-    public TMP_InputField id;
-    public TMP_InputField pw;
+    CLoginSocket m_loginSocket;
+    public GameObject worldServerObject;
+    public TMP_InputField Input_id;
+    public TMP_InputField Input_pw;
     public Button loginButton;
     public Button caButton;
     public Image image1;
     public Image image2;
     public Image image3;
     public Image image4;
+
     public void Handle(byte[] _Buffer)
     {
         memoryStream = new MemoryStream(_Buffer);
@@ -38,46 +40,42 @@ public class CLoginPacketHandler : MonoBehaviour
             case 3:
                 CreateAccount();
                 break;
-            case 6:
-                InField();
-                break;
-            case 7:
-                DoubleCheck();
-                break;
-            case 8:
-                CharacterList();
-                break;
-            case 9:
-                UpdateCharacterList();
-                break;
             default:
                 break;
         }
     }
 
+
+
     private void Login()
     {
+        int ret = binaryReader.ReadUInt16();
         int key = binaryReader.ReadUInt16();
+        byte[] Buffer = new byte[28];
+        Buffer = binaryReader.ReadBytes(28);
+        string id = System.Text.Encoding.Unicode.GetString(Buffer);
 
-        if (key == 0)
+        if (ret == 0)
         {
-            id.interactable = false;
-            pw.interactable = false;
+            Input_id.interactable = false;
+            Input_pw.interactable = false;
             loginButton.interactable = false;
             caButton.interactable = false;
             image1.gameObject.SetActive(true);
         }
-        if(key > 0)
+        if(ret > 0)
         {
-            CSceneManager.Instance.OnChangeScene("Characterselection");
+            CDataManager.Instance.SetKey(key);
+            CDataManager.Instance.SetId(id);
+            worldServerObject.SetActive(true);
         }
     }
     private void CheckID()
     {
         int key = binaryReader.ReadUInt16();
 
-        id.interactable = false;
-        pw.interactable = false;
+        Input_id.interactable = false;
+        Input_pw.interactable = false;
         loginButton.interactable = false;
         caButton.interactable = false;
 
@@ -95,82 +93,20 @@ public class CLoginPacketHandler : MonoBehaviour
     {
         int key = binaryReader.ReadUInt16();
 
-        id.interactable = false;
-        pw.interactable = false;
+        Input_id.interactable = false;
+        Input_pw.interactable = false;
         loginButton.interactable = false;
         caButton.interactable = false;
-        key = 1;
+        
         if (key == 1)
         {
+            image2.gameObject.SetActive(false);
             image4.gameObject.SetActive(true);
         }
     }
 
-    private void CharacterList()
+    public void Initialized(CLoginSocket _loginSocket)
     {
-        int key = binaryReader.ReadUInt16();
-        CStruct.sCharacterList sCharacter;
-
-        sCharacter.c1_name_Len = binaryReader.ReadInt32();
-        sCharacter.c1_name = System.Text.Encoding.Default.GetString(binaryReader.ReadBytes(28));
-        sCharacter.c1 = binaryReader.ReadInt32();
-        sCharacter.c_1_Level = binaryReader.ReadInt32();
-
-        sCharacter.c2_name_Len = binaryReader.ReadInt32();
-        sCharacter.c2_name = System.Text.Encoding.Default.GetString(binaryReader.ReadBytes(28));
-        sCharacter.c2 = binaryReader.ReadInt32();
-        sCharacter.c_2_Level = binaryReader.ReadInt32();
-
-        sCharacter.c3_name_Len = binaryReader.ReadInt32();
-        sCharacter.c3_name = System.Text.Encoding.Default.GetString(binaryReader.ReadBytes(28));
-        sCharacter.c3 = binaryReader.ReadInt32();
-        sCharacter.c_3_Level = binaryReader.ReadInt32();
-
-        CLoginApp app = FindAnyObjectByType<CLoginApp>();
-        app.SetCharacterList(sCharacter);
-    }
-
-    private void UpdateCharacterList()
-    {
-        int key = binaryReader.ReadUInt16();
-        CStruct.sCharacterList sCharacter;
-
-        sCharacter.c1_name_Len = binaryReader.ReadInt32();
-        sCharacter.c1_name = System.Text.Encoding.Default.GetString(binaryReader.ReadBytes(28));
-        sCharacter.c1 = binaryReader.ReadInt32();
-        sCharacter.c_1_Level = binaryReader.ReadInt32();
-
-        sCharacter.c2_name_Len = binaryReader.ReadInt32();
-        sCharacter.c2_name = System.Text.Encoding.Default.GetString(binaryReader.ReadBytes(28));
-        sCharacter.c2 = binaryReader.ReadInt32();
-        sCharacter.c_2_Level = binaryReader.ReadInt32();
-
-        sCharacter.c3_name_Len = binaryReader.ReadInt32();
-        sCharacter.c3_name = System.Text.Encoding.Default.GetString(binaryReader.ReadBytes(28));
-        sCharacter.c3 = binaryReader.ReadInt32();
-        sCharacter.c_3_Level = binaryReader.ReadInt32();
-
-        CCharacterScene cCharacter = FindAnyObjectByType<CCharacterScene>();
-        cCharacter.UpdateCharacterList(sCharacter);
-    }
-
-    private void InField()
-    {
-        byte[] Buffer = new byte[32];
-        Buffer = binaryReader.ReadBytes(32);
-        string name = System.Text.Encoding.Unicode.GetString(Buffer);
-
-        CDataManager.Instance.SetKey(name);
-        CSceneManager.Instance.OnChangeScene("ForestTown");
-
-        // key를 저장하고 연결은 끊어도 된다.
-    }
-
-    private void DoubleCheck()
-    {
-        int check = binaryReader.ReadUInt16();
-
-        CCharacterScene scene = FindAnyObjectByType<CCharacterScene>();
-        scene.NameCheck(check);
+        m_loginSocket = _loginSocket;
     }
 }
